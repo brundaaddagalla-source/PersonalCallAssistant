@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.schemas import Action, Identification, RiskAssessment, RiskLabel
 from app.schemas import Action, Identification, Intent, RiskAssessment, RiskLabel
 
 

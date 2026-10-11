@@ -1,6 +1,7 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
+Action = Literal["ask_followup", "take_message", "escalate", "end_call", "continue"]
 Action = Literal["ask_clarification", "handle", "transfer", "take_message", "block", "ask_followup", "escalate", "end_call", "continue"]
 SessionStatus = Literal["active", "escalation_requested", "ended"]
 

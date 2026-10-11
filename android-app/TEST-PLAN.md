@@ -24,3 +24,14 @@ All cases below remain NOT RUN until a tester records device model, Android vers
 | App rules disabled or app uninstalled | Verify forwarding separately; app cannot certify forwarding is off |
 
 Use consenting testers and ordinary test calls. The app does not place calls or alter forwarding settings. No real contact data should be included in shared bug reports.
+
+## Member 1 UI acceptance checks
+- Navigate all five tabs in light, dark, and system mode; rotate and increase font size.
+- Grant/revoke contacts permission; verify refresh and no stale contact list after revocation.
+- Add/remove a favorite; set a contact to Always ring, Silence, then Default; restart the app.
+- Edit quiet hours; test overnight windows, weekday transitions, and empty day selection.
+- Turn Assistant mode off; all calls must be allowed regardless of schedule/contact overrides.
+- Type, delete, clear, and long-press 0 on the keypad. Call opens Android dialer with the same number; it does not directly place a call.
+- Grant/deny notification permission; inspect lock-screen privacy and tap a notification.
+- Filter/search recents, open a call detail, call back, and clear history.
+- Verify UI never claims AI is answering or carrier forwarding has been disabled.

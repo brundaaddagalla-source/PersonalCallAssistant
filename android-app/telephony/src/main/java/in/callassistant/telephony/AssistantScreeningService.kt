@@ -13,7 +13,7 @@ class AssistantScreeningService : CallScreeningService() {
  private val main = Handler(Looper.getMainLooper())
  private val workers = Executors.newFixedThreadPool(2)
  private val pending = mutableSetOf<Pending>()
- private class Pending(val details: Call.Details, val number: String?, val enabled: Boolean, val silence: Boolean) {
+ private class Pending(val details: Call.Details, val number: String?, val enabled: Boolean, val silence: Boolean, val rule: ContactRule) {
   val cancellation = CancellationSignal()
   var future: Future<*>? = null
   var done = false
@@ -23,7 +23,8 @@ class AssistantScreeningService : CallScreeningService() {
   if (details.callDirection != Call.Details.DIRECTION_INCOMING) return
   val settings = TelephonyStore(this)
   val raw = details.handle?.takeIf { it.scheme == "tel" }?.schemeSpecificPart
-  val p = Pending(details, PhoneNumbers.normalize(raw), settings.enabled, settings.silenceUnknown)
+  val preferences = AssistantPreferences(this)
+  val p = Pending(details, PhoneNumbers.normalize(raw), settings.enabled && preferences.schedule.contains(java.time.LocalDateTime.now()), settings.silenceUnknown, preferences.rule(raw))
   pending.add(p)
   // Finish locally well before Android's five-second response deadline. Never call a backend here.
   p.timeout = Runnable { finish(p, ContactMatch(ContactStatus.TIMED_OUT), "Contact lookup timed out; call allowed") }
@@ -38,11 +39,13 @@ class AssistantScreeningService : CallScreeningService() {
   p.done = true
   p.timeout?.let(main::removeCallbacks)
   pending.remove(p)
-  val action = ScreeningPolicy.decide(p.enabled, p.silence, match.status)
+  val action = LocalCallRules.decide(p.enabled, p.silence, match.status, p.rule)
   try {
    respondToCall(p.details, CallResponse.Builder().setDisallowCall(false).setRejectCall(false)
     .setSilenceCall(action == ScreeningAction.SILENCE).setSkipCallLog(false).setSkipNotification(false).build())
-   TelephonyStore(this).add(ScreeningEvent(UUID.randomUUID().toString(), System.currentTimeMillis(), p.number, match, action, reason))
+   val event = ScreeningEvent(UUID.randomUUID().toString(), System.currentTimeMillis(), p.number, match, action, reason)
+   TelephonyStore(this).add(event)
+   runCatching { ScreeningNotifier.show(this,event) }
   } finally {
    // Cancellation happens after the response, so provider cancellation cannot delay screening.
    p.future?.cancel(true)

@@ -11,16 +11,40 @@ class SessionStore:
         self.items = {}
         self.lock = RLock()
 
-    def create(self, caller_number=None, caller_name=None, language="English"):
+    def create(
+        self,
+        caller_number=None,
+        caller_name=None,
+        language="English",
+        is_known_contact=False,
+        contact_group="none",
+        number_withheld=False,
+        user_name=None,
+        do_not_disturb=False,
+        max_clarification_turns=3,
+        rules=None
+    ):
         item = {
-            "session_id": str(uuid4()), "caller_number": caller_number,
-            "caller_name": caller_name, "language": language, "status": "active",
-            "turns": [], "created_at": datetime.now(timezone.utc),
+            "session_id": str(uuid4()),
+            "caller_number": caller_number,
+            "caller_name": caller_name,
+            "language": language,
+            "is_known_contact": is_known_contact,
+            "contact_group": contact_group,
+            "number_withheld": number_withheld,
+            "user_name": user_name,
+            "do_not_disturb": do_not_disturb,
+            "max_clarification_turns": max_clarification_turns,
+            "rules": rules or [],
+            "status": "active",
+            "turns": [],
+            "created_at": datetime.now(timezone.utc),
             "previous_intent": None
         }
         with self.lock:
             self.items[item["session_id"]] = item
         return item
+
 
     def get(self, session_id):
         with self.lock:

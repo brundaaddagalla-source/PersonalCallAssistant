@@ -1,13 +1,20 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
-Action = Literal["ask_followup", "take_message", "escalate", "end_call", "continue"]
+Action = Literal["ask_clarification", "handle", "transfer", "take_message", "block", "ask_followup", "escalate", "end_call", "continue"]
 SessionStatus = Literal["active", "escalation_requested", "ended"]
 
 class SessionCreate(BaseModel):
     caller_number: str | None = None
     caller_name: str | None = None
     language: str = "English"
+    is_known_contact: bool = False
+    contact_group: str = "none"
+    number_withheld: bool = False
+    user_name: str | None = None
+    do_not_disturb: bool = False
+    max_clarification_turns: int = 3
+    rules: list[dict] = Field(default_factory=list)
 
 class TurnRequest(BaseModel):
     caller_text: str = Field(min_length=1, max_length=12000)
@@ -20,8 +27,20 @@ class DecisionResponse(BaseModel):
     spam_risk: str = "low"
     action: Action = "continue"
     response_text: str = "Thank you. Could you tell me a little more?"
+    speak: str | None = None
+    end_call: bool = False
     should_escalate: bool = False
     should_end_call: bool = False
+    confidence: float | None = None
+    risk: dict | None = None
+    identification: dict | None = None
+    reasons: list[str] = Field(default_factory=list)
+    matched_rule_id: str | None = None
+    caution: bool = False
+    caller_summary: str | None = None
+    caller_message: str | None = None
+    notification: dict | None = None
+
 
 class TurnResponse(BaseModel):
     session_id: str

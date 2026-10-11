@@ -372,31 +372,77 @@ Supported actions: `ask_followup`, `take_message`, `escalate`, `end_call`, `cont
 
 ---
 
-## 9. Running Tests
+---
 
-Run the comprehensive pytest suite:
+## 9. Integration with Member 3 (AI Decision API)
+
+The Voice Engine integrates directly with Member 3's AI Decision API (`ai-backend/`) adhering strictly to the contract documented in `docs/ai-backend-api.md`.
+
+### Architecture & Connection
+- **AI Backend Base URL:** Configurable via `AI_BACKEND_URL=http://127.0.0.1:8000` or `DECISION_API_URL=http://127.0.0.1:8000/v1/decide` in `voice-engine/.env`.
+- **Stateless Decision Engine:** Member 3's backend is stateless. For every caller turn, `ConversationManager` compiles the entire ordered transcript:
+  ```json
+  [
+    {"speaker": "caller", "text": "Hello, I need help checking my delivery status."},
+    {"speaker": "agent", "text": "I can help with a delivery. Where should it be left, or what is the tracking or order reference?"},
+    {"speaker": "caller", "text": "My tracking reference is TRK123456."}
+  ]
+  ```
+  together with `caller` metadata (`number`, `contact_name`, `is_known_contact`, `contact_group`) and `preferences` (`user_name`, `rules`, `do_not_disturb`).
+- **Resolution of Repeating Question Bug:**
+  - In Turn 1, the AI backend returns `action="ask_clarification"`, `speak="..."`, `end_call=false`.
+  - In Turn 2, because the Voice Engine passes the full conversation transcript including the first turn's questions and the new tracking reference `TRK123456`, the AI backend transitions to `action="handle"`, returns a tailored resolution, and flags `end_call=true`. The assistant never blindly repeats the previous question.
+
+### Running Both Servers Simultaneously
+
+Open two separate terminal windows:
+
+**Terminal 1 — AI Backend (Port 8000):**
 ```powershell
+cd c:\Users\shaik\Downloads\PersonalCallAssistant\ai-backend
+python -m uvicorn app.main:app --reload --port 8000
+```
+- Swagger Docs: `http://127.0.0.1:8000/docs`
+- Health: `http://127.0.0.1:8000/health`
+
+**Terminal 2 — Voice Engine (Port 8100):**
+```powershell
+cd c:\Users\shaik\Downloads\PersonalCallAssistant\voice-engine
+python -m uvicorn app.main:app --reload --port 8100
+```
+- Swagger Docs: `http://127.0.0.1:8100/docs`
+- Health: `http://127.0.0.1:8100/health`
+
+---
+
+## 10. Running Automated Tests
+
+Run the complete test suite for both modules:
+
+```powershell
+# 1. Run Voice Engine tests (includes integration & unit tests)
+cd c:\Users\shaik\Downloads\PersonalCallAssistant\voice-engine
 python -m pytest -q
+# Result: 49 passed
+
+# 2. Run AI Backend tests
+cd c:\Users\shaik\Downloads\PersonalCallAssistant\ai-backend
+python -m pytest -q
+# Result: 33 passed
 ```
 
-Expected output:
-```
-44 passed in 4.86s
-```
-
-The test suite covers:
-- Service health and diagnostics
-- Session creation, turn processing, turn retrieval, and termination
-- 404 on unknown session IDs and 409 on ended session turns
-- In-order turns and UTC ISO timestamps
-- Mock decision engine determinism for all 5 conversational categories
-- HTTP decision client timeout, 500 error, and invalid schema handling
-- Audio file validation (extension, empty file, file size, header corruption)
-- STT disabled and mock modes
-- TTS disabled and mock modes
-- All 8 repeatable demo scenarios
-- Telephony adapter simulation lifecycle
-- Temporary audio file cleanup utility
+The Voice Engine test suite covers:
+- **Integration Tests (`tests/test_integration.py`):**
+  - Turn 1 & Turn 2 delivery conversation flow with full transcript handover
+  - Non-repeating question verification
+  - Multi-turn session isolation between concurrent callers
+  - Unreachable/failing AI backend resilience (HTTP 502 with uncorrupted history)
+  - Audio generation toggle (`generate_audio=true` vs `generate_audio=false`)
+  - End-to-end `/api/voice/process-audio` audio upload pipeline with AI Decision API
+- **Hermetic Simulation Tests (`tests/test_api.py`, `tests/test_conversation.py`, `tests/test_scenarios.py`, `tests/test_stt_tts.py`):**
+  - Complete session lifecycle and state machine
+  - Offline deterministic simulation for all 8 core conversational scenarios
+  - Local faster-whisper STT and edge-tts TTS verification
 
 ---
 

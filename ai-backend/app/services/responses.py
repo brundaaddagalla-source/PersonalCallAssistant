@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.schemas import Action, Identification, RiskAssessment, RiskLabel
+from app.schemas import Action, Identification, Intent, RiskAssessment, RiskLabel
 
 
 def render_speech(
@@ -13,18 +13,25 @@ def render_speech(
     instruction: str | None,
     has_speech: bool,
     by_rule_block: bool = False,
+    intent: Intent | None = None,
 ) -> tuple[str, bool]:
     """Return (text for TTS, end_call). The agent always discloses it is an AI."""
     name = ident.claimed_name or ident.matched_contact
     thanks = f"Thanks, {name}." if name else "Thank you."
 
     if action == Action.ask_clarification:
+        if intent == Intent.delivery:
+            return (
+                "I can assist with your delivery. Where should the package be left, or what is the tracking reference?",
+                False,
+            )
         if agent_turns == 0:
             return (
                 f"Hello, this is the AI assistant for {owner}. They can't take your call right now. "
                 "May I ask who's calling and what it's regarding?",
                 False,
             )
+
         if risk.label == RiskLabel.suspicious:
             return (
                 "I'd like to help, but I couldn't confirm the details. Could you give me your full name, "

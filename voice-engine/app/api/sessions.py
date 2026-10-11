@@ -8,7 +8,18 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 @router.post("")
 def create_session(payload: SessionCreate):
-    s = store.create(payload.caller_number, payload.caller_name, payload.language)
+    s = store.create(
+        caller_number=payload.caller_number,
+        caller_name=payload.caller_name,
+        language=payload.language,
+        is_known_contact=payload.is_known_contact,
+        contact_group=payload.contact_group,
+        number_withheld=payload.number_withheld,
+        user_name=payload.user_name,
+        do_not_disturb=payload.do_not_disturb,
+        max_clarification_turns=payload.max_clarification_turns,
+        rules=payload.rules,
+    )
     return {
         "session_id": s["session_id"],
         "status": s["status"],
@@ -17,6 +28,7 @@ def create_session(payload: SessionCreate):
         "language": s["language"],
         "created_at": s["created_at"].isoformat() if hasattr(s["created_at"], "isoformat") else str(s["created_at"])
     }
+
 
 @router.get("/{session_id}")
 def get_session(session_id: str):

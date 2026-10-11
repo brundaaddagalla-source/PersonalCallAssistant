@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 from datetime import datetime
 
@@ -29,6 +30,15 @@ from app.services.transcript import agent_turn_count, caller_text
 
 _UNWANTED_INTENTS = {Intent.sales_marketing, Intent.robocall, Intent.survey, Intent.prize_offer}
 _SENSITIVE_INTENTS = {Intent.bank_finance, Intent.government_legal, Intent.tech_support}
+_DELIVERY_DETAILS_RX = re.compile(
+    r"\b(?:trk|tracking|tracking reference|reference number|waybill|order number|flat|gate|door|outside|leave it|drop off|security desk|reception|address|leave at|left at)\b|\b[A-Z]{2,}\d+\b|\b\d{5,}\b",
+    re.I,
+)
+
+
+def _has_delivery_details(text: str) -> bool:
+    return bool(_DELIVERY_DETAILS_RX.search(text))
+
 
 
 @dataclass
@@ -124,6 +134,7 @@ def _policy(
     rule: UserRule | None,
     has_speech: bool,
     agent_turns: int,
+    raw_text: str = "",
 ) -> Outcome:
     known = caller.is_known_contact
     vip = known and caller.contact_group in (ContactGroup.vip, ContactGroup.family)
@@ -190,6 +201,8 @@ def _policy(
         return Outcome(Action.take_message, ["Suspicious wording from an unverified caller; not ringing through."], True)
 
     if intent in (Intent.delivery, Intent.appointment):
+        if intent == Intent.delivery and can_ask and not _has_delivery_details(raw_text):
+            return Outcome(Action.ask_clarification, ["Delivery inquiry without tracking reference or drop-off details; asking for tracking reference."])
         return Outcome(Action.handle, [f"Routine {intent.value} call with no risk signals; agent can handle it."])
 
     if intent in _SENSITIVE_INTENTS:
@@ -252,6 +265,7 @@ def decide(req: DecideRequest) -> Decision:
         rule=rule,
         has_speech=has_speech,
         agent_turns=agent_turns,
+        raw_text=a.text,
     )
 
     owner = prefs.user_name or "the person you're calling"
@@ -264,7 +278,9 @@ def decide(req: DecideRequest) -> Decision:
         instruction=out.rule.instruction if out.rule else None,
         has_speech=has_speech,
         by_rule_block=out.by_rule_block,
+        intent=a.intent.intent,
     )
+
 
     who = _who(caller, a.identification)
     topic = a.intent.intent.value.replace("_", " ")

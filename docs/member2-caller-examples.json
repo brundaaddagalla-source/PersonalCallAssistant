@@ -1,0 +1,36 @@
+[
+  {
+    "caller": {
+      "number": "+919876543210",
+      "is_known_contact": true,
+      "contact_name": "Demo Contact",
+      "contact_group": "none",
+      "number_withheld": false
+    },
+    "voice_session": {
+      "caller_number": "+919876543210",
+      "is_known_contact": true,
+      "caller_name": "Demo Contact",
+      "contact_group": "none",
+      "number_withheld": false,
+      "language": "English"
+    }
+  },
+  {
+    "caller": {
+      "number": "+919876543210",
+      "is_known_contact": false,
+      "contact_name": null,
+      "contact_group": "none",
+      "number_withheld": false
+    },
+    "voice_session": {
+      "caller_number": "+919876543210",
+      "is_known_contact": false,
+      "caller_name": null,
+      "contact_group": "none",
+      "number_withheld": false,
+      "language": "English"
+    }
+  }
+]

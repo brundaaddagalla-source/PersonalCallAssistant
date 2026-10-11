@@ -12,13 +12,13 @@ Base URL (dev): `http://<backend-host>:8000`. Interactive schema at `/docs`.
 
 ## Call loop (Member 4, voice engine)
 
-1. Incoming call arrives, Agent Mode is on. Member 2 supplies the `caller` object (number, contact match, group).
+1. A forwarded call arrives at the phone-service provider. The provider identifies the account and call. Member 2 supplies a contact-context mapping when available; permission failures are not unknown-contact matches. See `member2-integration.md`.
 2. Call `/v1/decide` with an empty transcript. The first response is a greeting that discloses the AI and asks who is calling.
 3. Speak `speak` with TTS. Run STT on the caller's reply and append `{"speaker":"caller","text":...}`. Also append the agent's line as `{"speaker":"agent","text":...}`.
 4. Call `/v1/decide` again with the **full transcript so far**.
 5. Act on `action`:
    - `ask_clarification`: speak and keep listening.
-   - `transfer`: tell Member 2's telephony module to ring the user / hand off the call. Speak `speak` while holding.
+   - `transfer`: request escalation through Member 4's provider bridge and the Android notification/voice client. `CallScreeningService` cannot transfer the forwarded call or inject audio. Speak `speak` while holding only when the provider supports this flow.
    - `handle` / `take_message`: speak `speak`, then end the call if `end_call` is true. Save `caller_message`.
    - `block`: speak `speak`, then end the call.
 6. Show `notification` (title, body, priority) in the app and store the decision in call history.
@@ -111,7 +111,7 @@ Serialise the user's settings into `preferences` (see above) on every request. S
 
 ## For Member 2 (telephony)
 
-Fill `caller` from the contacts lookup. Treat `transfer` as "ring the user now"; the backend never places calls itself.
+Use `CallerContext.decisionCaller()` after a conclusive local lookup. `CallerContext.voiceSession()` maps to Member 4's session API. Inconclusive lookups return no payload; the current boolean-only API cannot express them safely. Contact groups are `none` until explicitly assigned by the user. `transfer` is an escalation request for the provider/voice integration, not an Android screening action. The backend never places calls itself.
 
 ## Known limitations
 

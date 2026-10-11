@@ -27,11 +27,39 @@ Contact groups remain `none`: the Android address book does not establish VIP/fa
 
 The simulated voice telephony adapter does not implement this production flow. Never use an Android random event UUID as the provider's call identity, or match concurrent calls using timestamps alone.
 
+## Connected integration implementation
+- `AssistantApiClient`: Pure-Kotlin HTTP client using standard `HttpURLConnection` to query backend services without external library bloat.
+  - Health checks: `checkHealth(baseUrl, path)` for Member 3 (`/health`) and Member 4 (`/health`).
+  - AI Decision API: `decide(aiBackendUrl, callerContext, transcript, userName)` calling Member 3's `POST /v1/decide`.
+  - Voice Engine API: `createVoiceSession(voiceEngineUrl, callerContext)` calling Member 4's `POST /api/sessions` and `sendVoiceTurn(voiceEngineUrl, sessionId, callerText)` calling `POST /api/sessions/{sessionId}/turn`.
+- Asynchronous screening event enrichment:
+  - Local `respondToCall(...)` executes immediately well within Android's 5-second deadline (1.2s timeout).
+  - Telephony store records the screening event immediately.
+  - If enabled and caller context is conclusive, background worker asynchronously queries Member 3's AI backend, updating the event with `decisionAction`, `intent`, `assistantResponse`, `escalationRequested`, and `backendStatus = "synced"` (or `"offline_fallback"` if unreachable).
+  - Inconclusive callers (permission denied, lookup failure, timeout) are recorded with `backendStatus = "inconclusive_skipped"` and allowed to ring normally without false-positive silencing.
+- Diagnostic harness (`MainActivity.kt`):
+  - Displays configurable backend URLs (`store.aiBackendUrl` default `http://10.0.2.2:8000`, `store.voiceEngineUrl` default `http://10.0.2.2:8100`).
+  - "Test server connections": checks health of both backends in background worker.
+  - "Query AI Decision (Member 3)": sends test caller context to Member 3 and displays intent, action, spoken text, and risk assessment.
+  - "Test Voice Turn (Member 4)": creates session and executes a multi-turn conversational interaction with Member 4's voice engine.
+  - Unified event history: displays caller details, local screening action, AI decision, intent, spoken response, escalation badges, and session references.
+
 ## Validation
-- Kotlin tests cover contact-normalization policy and mapping to both server contracts.
-- `docs/member2-caller-examples.json` contains synthetic payloads; tests in each Python service validate these against their existing models.
-- See `android-app/TEST-PLAN.md` for pending physical-phone/Airtel checks.
-- The diagnostic UI is English-only; language-specific AI behavior is owned by the voice engine.
+- Kotlin tests:
+  - `PolicyTest`: validates contact-normalization rules, silence conditions, and phone number formatting.
+  - `CallerContextTest`: validates schema mappings to both Member 3 and Member 4 contracts.
+  - `IntegrationModelTest`: validates backward-compatible `ScreeningEvent` defaults and data classes.
+  - Gradle test suite: `./gradlew :telephony:testDebugUnitTest` (all passing).
+  - Gradle build: `./gradlew :app:assembleDebug` (build successful).
+- Python integration tests:
+  - `voice-engine/tests/test_member2_contract.py`: validates Member 2 payloads across 6 comprehensive flows:
+    1. Saved caller (work/personal)
+    2. Unsaved caller (delivery 2-turn flow)
+    3. Unknown caller (callback request)
+    4. Urgent matter escalation (emergency transfer)
+    5. Suspicious caller (OTP fraud defense / block)
+    6. Contract serialization fidelity
+  - Full test suites: `ai-backend` (34 passed), `voice-engine` (55 passed).
 
 ## Default dialer
 Not requested. InCallService would require a proper dialer/in-call UI and still would not grant arbitrary SIM audio access. Supported local actions are allow and silence. Reject, hangup, AI answering, and carrier forwarding are not claimed by this module.

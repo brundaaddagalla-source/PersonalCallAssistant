@@ -7,7 +7,7 @@ from app.schemas import Intent
 
 _RAW: dict[Intent, list[tuple[str, float]]] = {
     Intent.emergency: [
-        (r"\b(?:emergency|accident|hospital|ambulance|injured|collapsed|heart attack|critical condition|in trouble)\b", 2.0),
+        (r"\b(?:emergency|accident|hospital|ambulance|injured|collapsed|heart attack|critical condition|in trouble|urgent|urgently|immediate(?:ly)?|asap|life threatening)\b", 2.0),
     ],
     Intent.delivery: [
         (r"\b(?:delivery|deliver(?:ing)?|courier|driver|drop(?:ping)? off)\b", 1.0),
@@ -36,7 +36,7 @@ _RAW: dict[Intent, list[tuple[str, float]]] = {
         (r"\b(?:you(?:'ve| have)? won|lottery|lucky draw|prize|congratulations|claim your)\b", 1.5),
     ],
     Intent.personal: [
-        (r"\b(?:it'?s me|how are you|are you free|where are you|dinner|come home|pick (?:me|you) up|miss you|call me back)\b", 1.0),
+        (r"\b(?:it'?s me|how are you|are you free|where are you|dinner|come home|pick (?:me|you) up|miss you|call me back|call back|callback|leave a message|take a message|can i (?:speak|talk) (?:to|with)|is [a-z]+ available)\b", 1.0),
     ],
     Intent.work: [
         (r"\b(?:meeting|project|deadline|client|office|report|colleague|manager|team|boss)\b", 1.0),

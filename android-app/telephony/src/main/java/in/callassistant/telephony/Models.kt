@@ -5,7 +5,14 @@ data class ContactMatch(val status: ContactStatus, val displayName: String? = nu
 enum class ScreeningAction { ALLOW, SILENCE }
 data class ScreeningEvent(
  val id: String, val timestamp: Long, val number: String?, val match: ContactMatch,
- val action: ScreeningAction, val reason: String
+ val action: ScreeningAction, val reason: String,
+ val decisionAction: String? = null,
+ val intent: String? = null,
+ val sessionRef: String? = null,
+ val assistantResponse: String? = null,
+ val escalationRequested: Boolean = false,
+ val backendStatus: String? = null,
+ val eventType: String = "screening"
 )
 object ScreeningPolicy {
  fun decide(enabled: Boolean, silenceUnknown: Boolean, status: ContactStatus): ScreeningAction =

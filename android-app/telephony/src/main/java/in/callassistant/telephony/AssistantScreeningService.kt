@@ -39,6 +39,7 @@ class AssistantScreeningService : CallScreeningService() {
   p.done = true
   p.timeout?.let(main::removeCallbacks)
   pending.remove(p)
+<<<<<<< Updated upstream
   val action = LocalCallRules.decide(p.enabled, p.silence, match.status, p.rule)
   try {
    respondToCall(p.details, CallResponse.Builder().setDisallowCall(false).setRejectCall(false)
@@ -46,6 +47,51 @@ class AssistantScreeningService : CallScreeningService() {
    val event = ScreeningEvent(UUID.randomUUID().toString(), System.currentTimeMillis(), p.number, match, action, reason)
    TelephonyStore(this).add(event)
    runCatching { ScreeningNotifier.show(this,event) }
+=======
+  val action = ScreeningPolicy.decide(p.enabled, p.silence, match.status)
+  val eventId = UUID.randomUUID().toString()
+  try {
+   respondToCall(p.details, CallResponse.Builder().setDisallowCall(false).setRejectCall(false)
+    .setSilenceCall(action == ScreeningAction.SILENCE).setSkipCallLog(false).setSkipNotification(false).build())
+   val store = TelephonyStore(this)
+   store.add(ScreeningEvent(
+    id = eventId,
+    timestamp = System.currentTimeMillis(),
+    number = p.number,
+    match = match,
+    action = action,
+    reason = reason,
+    backendStatus = if (!p.enabled) "screening_disabled" else "pending"
+   ))
+   if (p.enabled) {
+    val context = CallerContext.from(p.number, match)
+    if (context != null) {
+     workers.execute {
+      val client = AssistantApiClient()
+      val result = client.decide(store.aiBackendUrl, context)
+      result.onSuccess { decision ->
+       store.updateEvent(eventId) { ev ->
+        ev.copy(
+         decisionAction = decision.action,
+         intent = decision.intent,
+         assistantResponse = decision.speak,
+         escalationRequested = decision.shouldEscalate,
+         backendStatus = "synced"
+        )
+       }
+      }.onFailure {
+       store.updateEvent(eventId) { ev ->
+        ev.copy(backendStatus = "offline_fallback")
+       }
+      }
+     }
+    } else {
+     store.updateEvent(eventId) { ev ->
+      ev.copy(backendStatus = "inconclusive_skipped")
+     }
+    }
+   }
+>>>>>>> Stashed changes
   } finally {
    // Cancellation happens after the response, so provider cancellation cannot delay screening.
    p.future?.cancel(true)

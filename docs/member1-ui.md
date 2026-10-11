@@ -9,7 +9,7 @@
 - **Notification inbox:** displays recent local screening events, explicitly distinguished from future AI summaries.
 
 ## Visual implementation
-Jetpack Compose and Material 3, with custom translucent gradient cards, highlights, large headings, a floating capsule navigation bar, circular keypad buttons, and soft blue/lilac backgrounds. The UI is inspired by iPhone Phone/Liquid Glass; it does not embed Apple fonts, assets, branding, or native iOS effects. The background is rendered locally. There are no external images or network calls.
+Jetpack Compose and Material 3, with custom translucent gradient cards, highlights, large headings, a floating four-tab capsule navigation bar, circular keypad buttons, and charcoal backgrounds with emerald accents. The UI is inspired by iPhone Phone/Liquid Glass; it does not embed Apple fonts, assets, branding, or native iOS effects. Settings is opened with the gear in the header. New installations default to Dark; existing explicitly saved appearance preferences are preserved. The background is rendered locally. There are no external images or network calls.
 
 ## State and behavior
 AssistantPreferences persists appearance, notifications, weekday/time schedules, favorites, and contact rules in app-private SharedPreferences. TelephonyStore retains the existing master/silence flags and the last 50 screening events. Contacts are read with permission from the Android provider and are not copied wholesale into preferences.
@@ -29,7 +29,7 @@ Unit tests cover ordinary and overnight schedules, Sunday/Monday rollover, endpo
 Physical Airtel calls and Android notification delivery still require a real device. See member1-validation.md for the checks actually completed in this environment.
 
 ## Rendered previews
-Host-rendered API 35 previews; actual device status bars and rendering may vary.
+Host-rendered API 35 previews with synthetic call activity created only by the UI test; the APK contains no seeded call history. Actual device status bars and rendering may vary.
 
 | Recents | Keypad |
 | --- | --- |
@@ -38,3 +38,6 @@ Host-rendered API 35 previews; actual device status bars and rendering may vary.
 | Assistant | Dark settings |
 | --- | --- |
 | ![Assistant](previews/assistant.png) | ![Dark settings](previews/settings-dark.png) |
+
+## Dark glass update (0.3.0)
+The reference concept is adapted to real local capabilities. Recent calls show allowed/silenced screening events rather than invented missed-call or spam verdicts. The Assistant dashboard counts today’s events within the retained 50-event history; it does not invent important-call counts or transcripts. Keypad/search state survives tab changes. The app still opens the system dialer; it does not replace the incoming-call screen or expose an unconnected “Let assistant answer” control.

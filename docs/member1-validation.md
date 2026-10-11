@@ -28,3 +28,6 @@ Robolectric uses an API 35 instrumented Android runtime downloaded through Gradl
 Physical Android/Airtel testing was not performed. Verify contact permission and call-screening-role prompts, actual incoming calls, notifications, dialer handoff, smaller displays/large text, and manufacturer battery restrictions with the checklist in `android-app/TEST-PLAN.md`. The native emulator could not run on this host; Robolectric does not substitute for carrier testing.
 
 This version does not activate carrier forwarding, connect the backend/voice service to live calls, provide remote AI summaries, or transfer a caller to the user. The UI makes those connection states explicit.
+
+## Dark glass 0.3.0 follow-up
+Rebuilt the APK and reran all 13 Android tests successfully, with zero lint errors. The UI test also verifies the new Dark default and keypad state retained across tab changes. Reviewed rendered Recents, Keypad, and Assistant screens. Updated previews contain synthetic screening events generated only in the test process. Physical-phone testing and live AI integration remain outstanding.

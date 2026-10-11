@@ -26,7 +26,7 @@ All cases below remain NOT RUN until a tester records device model, Android vers
 Use consenting testers and ordinary test calls. The app does not place calls or alter forwarding settings. No real contact data should be included in shared bug reports.
 
 ## Member 1 UI acceptance checks
-- Navigate all five tabs in light, dark, and system mode; rotate and increase font size.
+- Navigate all four tabs and the header Settings button in light, dark, and system mode; rotate and increase font size.
 - Grant/revoke contacts permission; verify refresh and no stale contact list after revocation.
 - Add/remove a favorite; set a contact to Always ring, Silence, then Default; restart the app.
 - Edit quiet hours; test overnight windows, weekday transitions, and empty day selection.

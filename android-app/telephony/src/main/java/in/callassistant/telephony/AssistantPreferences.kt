@@ -36,7 +36,7 @@ class AssistantPreferences(context: Context) {
    prefs.getStringSet("days",setOf("1","2","3","4","5"))!!.mapNotNull { it.toIntOrNull()?.takeIf { d -> d in 1..7 } }.toSet())
   set(s) { prefs.edit().putBoolean("schedule",s.enabled).putInt("start",s.start).putInt("end",s.end).putStringSet("days",s.days.map { it.toString() }.toSet()).apply() }
  var appearance: String
-  get()=prefs.getString("appearance","System")!!
+  get()=prefs.getString("appearance","Dark")!!
   set(v) { prefs.edit().putString("appearance",v).apply() }
  var notifyCalls: Boolean
   get()=prefs.getBoolean("notify",false)

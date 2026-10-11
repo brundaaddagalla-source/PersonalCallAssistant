@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,8 +60,8 @@ import java.text.DateFormat
 import java.time.LocalDateTime
 import java.util.Date
 
-private val Blue=Color(0xFF1674ED)
-private val Green=Color(0xFF148452)
+private val Blue=Color(0xFF087F67)
+private val Green=Color(0xFF17966B)
 private val Ink=Color(0xFF142137)
 private val Muted=Color(0xFF59687D)
 private val Shape=RoundedCornerShape(28.dp)
@@ -82,9 +83,10 @@ class MainActivity : ComponentActivity() {
  val context=LocalContext.current
  val store=remember { TelephonyStore(context) };val prefs=remember { AssistantPreferences(context) }
  var pageName by rememberSaveable { mutableStateOf(Page.Calls.name) };val page=Page.valueOf(pageName)
+ val pageState=rememberSaveableStateHolder()
  var appearance by remember { mutableStateOf(prefs.appearance) }
  val dark=appearance=="Dark" || (appearance=="System" && isSystemInDarkTheme())
- val scheme=if(dark) darkColorScheme(primary=Color(0xFF83B7FF),background=Color(0xFF0D1525),surface=Color(0xFF1D2A40),onSurface=Color(0xFFF0F4FF),onSurfaceVariant=Color(0xFFB9C6DB))
+ val scheme=if(dark) darkColorScheme(primary=Color(0xFF75E8BC),secondary=Color(0xFF75E8BC),secondaryContainer=Color(0xFF23463B),onSecondaryContainer=Color(0xFFE0FFF1),background=Color(0xFF080D0E),surface=Color(0xFF172023),onSurface=Color(0xFFF1F5F3),onSurfaceVariant=Color(0xFFA9B6B4))
  else lightColorScheme(primary=Blue,background=Color(0xFFF4F6FC),surface=Color.White,onSurface=Ink,onSurfaceVariant=Muted)
  LaunchedEffect(dark) {
   (context as? ComponentActivity)?.enableEdgeToEdge(
@@ -152,12 +154,14 @@ class MainActivity : ComponentActivity() {
    Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Row(Modifier.fillMaxWidth().padding(horizontal=24.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
      Column(Modifier.weight(1f)) {
-      Text("PERSONAL CALL ASSISTANT",fontSize=10.sp,letterSpacing=1.6.sp,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onSurfaceVariant)
+      Text("PERSONAL CALL ASSISTANT",fontSize=9.sp,letterSpacing=1.6.sp,fontWeight=FontWeight.SemiBold,color=MaterialTheme.colorScheme.onSurfaceVariant)
       Text(if(page==Page.Calls) "Phone" else page.label,fontSize=35.sp,fontWeight=FontWeight.Bold,letterSpacing=(-1).sp,color=MaterialTheme.colorScheme.onSurface)
      }
-     CircleButton(Icons.Outlined.NotificationsNone,"Open call notifications") { inbox=true }
+     IconButton(onClick={inbox=true}) {Icon(Icons.Outlined.NotificationsNone,"Open call notifications",tint=MaterialTheme.colorScheme.onSurfaceVariant)}
+     CircleButton(Icons.Outlined.Settings,"Settings") {pageName=Page.Settings.name}
     }
     Box(Modifier.weight(1f).fillMaxWidth()) {
+     pageState.SaveableStateProvider(page.name) {
      when(page) {
       Page.Calls -> CallsPage(events,contacts.filter { it.number in favorites },active,enabled,hasRole,
        {pageName=Page.Assistant.name},{selectedEvent=it},{selectedPerson=it},{dial(it)})
@@ -165,7 +169,7 @@ class MainActivity : ComponentActivity() {
        {requestContacts.launch(Manifest.permission.READ_CONTACTS)},{permissionTick++; /* contacts reloads after resume or permission change */
         context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:${context.packageName}"))) },{selectedPerson=it})
       Page.Keypad -> KeypadPage { dial(it) }
-      Page.Assistant -> AssistantPage(enabled,active,silence,schedule,hasRole,hasContacts,now,
+      Page.Assistant -> AssistantPage(enabled,active,silence,schedule,hasRole,hasContacts,events,now,
        {enabled=it;store.enabled=it},{silence=it;store.silenceUnknown=it}, {schedule=it;prefs.schedule=it},askRole,
        {requestContacts.launch(Manifest.permission.READ_CONTACTS)},{pageName=Page.Contacts.name})
       Page.Settings -> SettingsPage(appearance,{appearance=it;prefs.appearance=it},notify,hasNotifications,
@@ -174,6 +178,7 @@ class MainActivity : ComponentActivity() {
        {requestContacts.launch(Manifest.permission.READ_CONTACTS)}, {confirmClear=true},
        { context.startActivity(Intent(context,DiagnosticsActivity::class.java)) })
      }
+    }
     }
     GlassNavigation(page,{pageName=it.name},dark)
    }
@@ -229,41 +234,48 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable private fun GlassBackground(dark:Boolean) {
- Canvas(Modifier.fillMaxSize().background(if(dark) Color(0xFF0D1525) else Color(0xFFF4F6FB))) {
-  drawCircle(Brush.radialGradient(listOf((if(dark) Color(0xFF244D79) else Color(0xFFCAE4FF)).copy(alpha=.75f),Color.Transparent),Offset(size.width*.95f,size.height*.10f),size.width*.95f),size.width*.95f,Offset(size.width*.95f,size.height*.10f))
-  drawCircle(Brush.radialGradient(listOf((if(dark) Color(0xFF48326F) else Color(0xFFE2D8FB)).copy(alpha=.70f),Color.Transparent),Offset(0f,size.height*.58f),size.width*.95f),size.width*.95f,Offset(0f,size.height*.58f))
-  drawCircle(Brush.radialGradient(listOf((if(dark) Color(0xFF1C5A59) else Color(0xFFD6F1EA)).copy(alpha=.55f),Color.Transparent),Offset(size.width,size.height),size.width),size.width,Offset(size.width,size.height))
+ Canvas(Modifier.fillMaxSize().background(if(dark) Color(0xFF080D0E) else Color(0xFFEDF3F0))) {
+  val mist=if(dark) Color(0xFF31514B) else Color(0xFFB9DACE)
+  drawCircle(Brush.radialGradient(listOf(mist.copy(alpha=.38f),Color.Transparent),Offset(size.width*.9f,size.height*.15f),size.width),size.width,Offset(size.width*.9f,size.height*.15f))
+  drawCircle(Brush.radialGradient(listOf(mist.copy(alpha=.24f),Color.Transparent),Offset(0f,size.height*.7f),size.width*.9f),size.width*.9f,Offset(0f,size.height*.7f))
+  val arc=androidx.compose.ui.graphics.Path().apply {moveTo(-size.width*.2f,size.height*.45f);cubicTo(size.width*.1f,size.height*.2f,size.width*.95f,size.height*.25f,size.width*1.2f,size.height*.62f)}
+  drawPath(arc,Color.White.copy(alpha=if(dark) .035f else .25f),style=androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
  }
 }
+@Composable private fun glassFill():Brush {
+ val dark=MaterialTheme.colorScheme.background==Color(0xFF080D0E)
+ return Brush.linearGradient(if(dark) listOf(Color(0xDB455051),Color(0xC9222C2F),Color(0xE0111A1C),Color(0xCC263537)) else listOf(Color(0xF5FFFFFF),Color(0xCCD9E8E2),Color(0xEFFFFFFF)))
+}
+@Composable private fun glassEdge():Brush = Brush.linearGradient(listOf(Color.White.copy(alpha=.48f),Color.White.copy(alpha=.09f),Color.White.copy(alpha=.05f),Color(0xFF9FBDB4).copy(alpha=.3f)))
 @Composable private fun GlassCard(modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit) {
- val dark=MaterialTheme.colorScheme.background==Color(0xFF0D1525)
- Column(modifier.fillMaxWidth().shadow(8.dp,Shape,ambientColor=Blue.copy(alpha=.05f),spotColor=Blue.copy(alpha=.06f))
-  .clip(Shape).background(Brush.verticalGradient(if(dark) listOf(Color(0xCC25344B),Color(0xA51B263B)) else listOf(Color(0xEFFFFFFF),Color(0xADFFFFFF))))
-  .border(1.dp,if(dark) Color.White.copy(alpha=.16f) else Color.White.copy(alpha=.95f),Shape).padding(18.dp),content=content)
+ Column(modifier.fillMaxWidth().shadow(10.dp,Shape,spotColor=Color.Black.copy(alpha=.35f))
+  .clip(Shape).background(glassFill()).border(.8.dp,glassEdge(),Shape).padding(18.dp),content=content)
 }
 @Composable private fun GlassNavigation(page:Page,onSelect:(Page)->Unit,dark:Boolean) {
- Row(Modifier.navigationBarsPadding().padding(horizontal=14.dp,vertical=10.dp).fillMaxWidth()
-  .shadow(18.dp,CircleShape,spotColor=Color(0x33264678)).clip(CircleShape)
-  .background(if(dark) Color(0xEC26354B) else Color(0xECFFFFFF)).border(1.dp,Color.White.copy(alpha=.55f),CircleShape).padding(6.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
-  Page.entries.forEach { p ->
+ Row(Modifier.navigationBarsPadding().padding(horizontal=18.dp,vertical=10.dp).fillMaxWidth()
+  .shadow(18.dp,CircleShape,spotColor=Color.Black).clip(CircleShape)
+  .background(glassFill()).border(1.dp,glassEdge(),CircleShape).padding(6.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
+  Page.entries.filter {it!=Page.Settings}.forEach { p ->
    val selected=page==p
-   Column(Modifier.weight(1f).clip(CircleShape).background(if(selected) MaterialTheme.colorScheme.primary.copy(alpha=.12f) else Color.Transparent)
+   Column(Modifier.weight(1f).clip(CircleShape).background(if(selected) MaterialTheme.colorScheme.primary.copy(alpha=.09f) else Color.Transparent)
     .clickable(role=Role.Tab,onClick={onSelect(p)}).padding(vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-    Icon(p.icon,p.label,tint=if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(23.dp))
-    Spacer(Modifier.height(4.dp));Text(p.label,fontSize=10.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
+    val color=if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    Icon(p.icon,p.label,tint=color,modifier=Modifier.size(23.dp))
+    Spacer(Modifier.height(4.dp));Text(p.label,color=color,fontSize=10.sp,fontWeight=if(selected) FontWeight.SemiBold else FontWeight.Normal,maxLines=1)
    }
   }
  }
 }
 @Composable private fun CircleButton(icon:ImageVector,label:String,onClick:()->Unit) {
- IconButton(onClick,Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface.copy(alpha=.65f)).border(1.dp,Color.White.copy(alpha=.45f),CircleShape)) {Icon(icon,label,tint=MaterialTheme.colorScheme.primary)}
+ IconButton(onClick,Modifier.size(44.dp).clip(CircleShape).background(glassFill()).border(.8.dp,glassEdge(),CircleShape)) {Icon(icon,label,tint=MaterialTheme.colorScheme.onSurface)}
 }
 @Composable private fun Hint(text:String) { Text(text,fontSize=13.sp,lineHeight=19.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.padding(vertical=6.dp)) }
 @Composable private fun Section(text:String) { Text(text,fontSize=19.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(top=8.dp,bottom=10.dp)) }
 @Composable private fun Avatar(name:String,size:Int=44) {
- val palettes=listOf(Color(0xFFDEE9FF),Color(0xFFE9DFF9),Color(0xFFD7EEE6),Color(0xFFFCE5D8))
- Box(Modifier.size(size.dp).clip(CircleShape).background(palettes[(name.hashCode() and Int.MAX_VALUE)%palettes.size]),contentAlignment=Alignment.Center) {
-  Text(name.trim().split(" ").filter { it.isNotEmpty() }.take(2).map {it.first().uppercaseChar()}.joinToString(""),fontSize=(size*.32).sp,fontWeight=FontWeight.SemiBold,color=Ink)
+ val palettes=listOf(Color(0xFF416B59),Color(0xFF425E6B),Color(0xFF65506E),Color(0xFF6B6452))
+ val color=palettes[(name.hashCode() and Int.MAX_VALUE)%palettes.size]
+ Box(Modifier.size(size.dp).clip(CircleShape).background(Brush.linearGradient(listOf(color.copy(alpha=.95f),color.copy(alpha=.4f),color.copy(alpha=.8f)))).border(.8.dp,glassEdge(),CircleShape),contentAlignment=Alignment.Center) {
+  Text(name.trim().split(" ").filter { it.isNotEmpty() }.take(2).map {it.first().uppercaseChar()}.joinToString(""),fontSize=(size*.32).sp,fontWeight=FontWeight.Medium,color=Color.White)
  }
 }
 @Composable private fun EmptyState(icon:ImageVector,title:String,detail:String) {
@@ -274,8 +286,8 @@ class MainActivity : ComponentActivity() {
  }
 }
 @Composable private fun Search(value:String,onChange:(String)->Unit,placeholder:String) {
- OutlinedTextField(value,onChange,Modifier.fillMaxWidth(),singleLine=true,shape=CircleShape,placeholder={Text(placeholder)},leadingIcon={Icon(Icons.Outlined.Search,null)},
-  colors=OutlinedTextFieldDefaults.colors(unfocusedContainerColor=MaterialTheme.colorScheme.surface.copy(alpha=.60f),focusedContainerColor=MaterialTheme.colorScheme.surface.copy(alpha=.8f),unfocusedBorderColor=Color.Transparent,focusedBorderColor=MaterialTheme.colorScheme.primary.copy(alpha=.4f)))
+ OutlinedTextField(value,onChange,Modifier.fillMaxWidth().clip(CircleShape).background(glassFill()).border(.8.dp,glassEdge(),CircleShape),singleLine=true,shape=CircleShape,placeholder={Text(placeholder)},leadingIcon={Icon(Icons.Outlined.Search,null)},
+  colors=OutlinedTextFieldDefaults.colors(unfocusedContainerColor=Color.Transparent,focusedContainerColor=Color.Transparent,unfocusedBorderColor=Color.Transparent,focusedBorderColor=MaterialTheme.colorScheme.primary.copy(alpha=.4f)))
 }
 @Composable private fun EventRow(e:ScreeningEvent,onClick:()->Unit) {
  Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(vertical=13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -295,27 +307,36 @@ class MainActivity : ComponentActivity() {
  var query by rememberSaveable { mutableStateOf("") };var onlySilenced by rememberSaveable {mutableStateOf(false)}
  val shown=events.filter { (!onlySilenced || it.action==ScreeningAction.SILENCE) && (it.number.orEmpty()+it.match.displayName.orEmpty()).contains(query,true) }
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=22.dp,end=22.dp,bottom=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+  item {Search(query,{query=it},"Search contacts, numbers or calls")}
+  item {Row(Modifier.fillMaxWidth().clip(CircleShape).background(glassFill()).border(.8.dp,glassEdge(),CircleShape).padding(4.dp)) {
+   listOf(false to "All",true to "Silenced").forEach { (value,label) ->
+    Box(Modifier.weight(1f).clip(CircleShape).background(if(onlySilenced==value) MaterialTheme.colorScheme.onSurface.copy(alpha=.16f) else Color.Transparent).clickable(role=Role.Tab){onlySilenced=value}.padding(12.dp),contentAlignment=Alignment.Center){Text(label,fontSize=13.sp,fontWeight=FontWeight.Medium)}
+   }
+  }}
+  item {Section("Favorites")
+   if(favorites.isEmpty()) Hint("Favorite a contact to keep your people close.")
+   else Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+    favorites.take(4).forEach {person -> Column(Modifier.weight(1f).clickable {onPerson(person)},horizontalAlignment=Alignment.CenterHorizontally) {
+     Avatar(person.name,56);Spacer(Modifier.height(8.dp));Text(person.name.substringBefore(" "),fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+     Text("Mobile",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }}
+   }
+  }
+  item {Section("Recent calls")}
+  if(shown.isEmpty()) item {GlassCard {EmptyState(Icons.Outlined.History,if(events.isEmpty()) "Your next call starts here" else "No matching calls",if(events.isEmpty()) "Once screening is enabled, your call activity will appear here." else "Try another search or filter.")}}
+  else items(shown,key={it.id}) {e -> Column {EventRow(e,{onEvent(e)});HorizontalDivider(color=MaterialTheme.colorScheme.onSurface.copy(alpha=.07f))}}
   item {GlassCard(Modifier.clickable(onClick=onAssistant)) {
    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-    Box(Modifier.size(42.dp).clip(CircleShape).background(Color(0xFFD9F3E6)),contentAlignment=Alignment.Center) {Icon(Icons.Outlined.AutoAwesome,null,tint=Green)}
-    Column(Modifier.weight(1f)) {Text(if(active) "A little less interruption" else "Make room for your day",fontWeight=FontWeight.SemiBold,fontSize=16.sp)
-     Text(if(active) "Local screening rules are active" else if(enabled && role) "Waiting for your next schedule" else "Set up your assistant",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+    Icon(Icons.Outlined.AutoAwesome,null,tint=MaterialTheme.colorScheme.primary)
+    Column(Modifier.weight(1f)) {Text(if(active) "Assistant rules active" else "Your time, protected",fontWeight=FontWeight.SemiBold,fontSize=15.sp)
+     Text(if(active) "Screening calls on this phone" else if(enabled && role) "Waiting for your next schedule" else "Set up your assistant",fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
     Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
    }
   }}
-  if(favorites.isNotEmpty()) item {Section("Favorites");Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-   favorites.take(4).forEach {person -> Column(Modifier.weight(1f).clickable {onPerson(person)},horizontalAlignment=Alignment.CenterHorizontally) {
-    Avatar(person.name,52);Spacer(Modifier.height(7.dp));Text(person.name.substringBefore(" "),fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-   }}
-  }}
-  item {Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {Text("Recents",Modifier.weight(1f),fontSize=24.sp,fontWeight=FontWeight.Bold)
-   FilterChip(!onlySilenced,{onlySilenced=false},label={Text("All")});Spacer(Modifier.width(8.dp));FilterChip(onlySilenced,{onlySilenced=true},label={Text("Silenced")})}}
-  item {Search(query,{query=it},"Search recent calls")}
-  if(shown.isEmpty()) item {GlassCard {EmptyState(Icons.Outlined.History,if(events.isEmpty()) "Your next call starts here" else "No matching calls",if(events.isEmpty()) "Once screening is enabled, your call activity will appear here." else "Try another search or filter.")}}
-  else items(shown,key={it.id}) { e -> GlassCard {EventRow(e,{onEvent(e)})} }
   item {Hint("Shows calls screened by this app, not your phone's full call history.")}
  }
 }
+
 @Composable private fun ContactsPage(contacts:List<Person>,permission:Boolean,loading:Boolean,error:String?,favorites:Set<String>,request:()->Unit,retry:()->Unit,select:(Person)->Unit) {
  var query by rememberSaveable {mutableStateOf("")};val shown=contacts.filter {(it.name+it.number).contains(query,true)}
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -327,7 +348,7 @@ class MainActivity : ComponentActivity() {
   else {
    item {Hint("${shown.size} numbers · tap a contact to set a rule")}
    items(shown,key={it.number}) { p ->
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.colorScheme.surface.copy(alpha=.6f)).clickable {select(p)}.padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(glassFill()).border(.8.dp,glassEdge(),RoundedCornerShape(22.dp)).clickable {select(p)}.padding(14.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
      Avatar(p.name);Column(Modifier.weight(1f)){Text(p.name,fontWeight=FontWeight.SemiBold);Text(p.number,fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
      if(p.number in favorites) Icon(Icons.Outlined.Star,"Favorite",tint=Color(0xFFB37E13),modifier=Modifier.size(18.dp))
      Icon(Icons.Outlined.ChevronRight,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -346,7 +367,7 @@ class MainActivity : ComponentActivity() {
   keys.chunked(3).forEach { row ->
    Row(Modifier.fillMaxWidth().padding(vertical=7.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
     row.forEach { (digit,letters) ->
-     Column(Modifier.size(76.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface.copy(alpha=.75f)).border(1.dp,Color.White.copy(alpha=.45f),CircleShape)
+     Column(Modifier.size(76.dp).clip(CircleShape).background(glassFill()).border(1.dp,glassEdge(),CircleShape)
       .combinedClickable(role=Role.Button,onClick={if(number.length<30) number+=digit},onLongClick={if(digit=="0" && number.isEmpty())number="+"}),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
       Text(digit,fontSize=32.sp,fontWeight=FontWeight.Normal);if(letters.isNotEmpty())Text(letters,fontSize=10.sp,letterSpacing=2.sp,fontWeight=FontWeight.Medium)
      }
@@ -355,7 +376,7 @@ class MainActivity : ComponentActivity() {
   }
   Row(Modifier.fillMaxWidth().padding(top=18.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
    Spacer(Modifier.size(64.dp))
-   FilledIconButton(onClick={dial(number)},enabled=number.isNotEmpty(),modifier=Modifier.size(76.dp),colors=IconButtonDefaults.filledIconButtonColors(containerColor=Color(0xFF22AC63),contentColor=Color.White)) {Icon(Icons.Outlined.Call,"Call number",Modifier.size(33.dp))}
+   FilledIconButton(onClick={dial(number)},enabled=number.isNotEmpty(),modifier=Modifier.size(76.dp).border(1.dp,Color(0xFFB1F7CC),CircleShape),colors=IconButtonDefaults.filledIconButtonColors(containerColor=Color(0xFF259E61),contentColor=Color.White)) {Icon(Icons.Outlined.Call,"Call number",Modifier.size(33.dp))}
    IconButton(onClick={number=number.dropLast(1)},Modifier.size(64.dp),enabled=number.isNotEmpty()) {Icon(Icons.Outlined.Backspace,"Delete last digit")}
   }
   Spacer(Modifier.height(12.dp));TextButton(onClick={number=""},enabled=number.isNotEmpty()) {Text("Clear number")}
@@ -367,31 +388,35 @@ class MainActivity : ComponentActivity() {
   Switch(checked,onChange,modifier=Modifier.semantics {contentDescription=title},colors=SwitchDefaults.colors(checkedTrackColor=Green,checkedThumbColor=Color.White))
  }
 }
-@Composable private fun AssistantPage(enabled:Boolean,active:Boolean,silence:Boolean,schedule:QuietSchedule,role:Boolean,contacts:Boolean,now:LocalDateTime,
+@Composable private fun AssistantPage(enabled:Boolean,active:Boolean,silence:Boolean,schedule:QuietSchedule,role:Boolean,contacts:Boolean,events:List<ScreeningEvent>,now:LocalDateTime,
  setEnabled:(Boolean)->Unit,setSilence:(Boolean)->Unit,setSchedule:(QuietSchedule)->Unit,askRole:()->Unit,askContacts:()->Unit,openContacts:()->Unit) {
  val context=LocalContext.current
  fun pick(start:Boolean) {val t=if(start)schedule.start else schedule.end; TimePickerDialog(context,{_,h,m ->setSchedule(if(start)schedule.copy(start=h*60+m) else schedule.copy(end=h*60+m))},t/60,t%60,true).show()}
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=22.dp,end=22.dp,bottom=20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-  item {
-   Box(Modifier.fillMaxWidth().clip(Shape).background(Brush.linearGradient(listOf(Color(0xFF143C65),Color(0xFF354674),Color(0xFF4C4275)))).border(1.dp,Color.White.copy(alpha=.4f),Shape)) {
-    Canvas(Modifier.matchParentSize()) {
-     drawCircle(Brush.radialGradient(listOf(Color(0xBB83DEF1),Color(0x507C9EFF),Color.Transparent),Offset(size.width*.85f,size.height*.30f),size.width*.47f),size.width*.47f,Offset(size.width*.85f,size.height*.30f))
-     drawCircle(Color.White.copy(alpha=.14f),size.width*.18f,Offset(size.width*.84f,size.height*.33f))
-     drawCircle(Color.White.copy(alpha=.12f),size.width*.13f,Offset(size.width*.84f,size.height*.33f),style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-    }
-    Column(Modifier.padding(24.dp)) {
-     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)){Icon(Icons.Outlined.AutoAwesome,null,tint=Color(0xFFA5F1DD),modifier=Modifier.size(17.dp));Text("YOUR TIME, PROTECTED",fontSize=10.sp,letterSpacing=1.2.sp,color=Color(0xFFE0EDFF),fontWeight=FontWeight.SemiBold)}
-     Spacer(Modifier.height(23.dp));Text("A little more\nquiet time.",fontSize=33.sp,lineHeight=37.sp,fontWeight=FontWeight.SemiBold,color=Color.White,letterSpacing=(-.7).sp)
-     Spacer(Modifier.height(18.dp));Text(if(active) "Local rules are active" else if(enabled && role) "Outside your quiet hours" else "Choose how calls reach you",color=Color(0xFFD6E9F5),fontSize=13.sp)
+  item {GlassCard {
+   Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+    Box(Modifier.size(52.dp).clip(CircleShape).background(glassFill()).border(.8.dp,glassEdge(),CircleShape),contentAlignment=Alignment.Center) {Icon(Icons.Outlined.DarkMode,null,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(28.dp))}
+    Column(Modifier.weight(1f)) {
+     Text(if(active) "Quiet time" else "Your quiet space",fontSize=21.sp,fontWeight=FontWeight.SemiBold)
+     Text(if(active && schedule.enabled) "Until %02d:%02d".format(schedule.end/60,schedule.end%60) else if(active) "Local screening is active" else if(enabled && role) "Outside your quiet hours" else "Set up local call screening",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
    }
-  }
+  }}
   item {GlassCard {
    ToggleRow("Assistant mode","Applies your local screening rules",enabled,setEnabled)
    HorizontalDivider(color=MaterialTheme.colorScheme.onSurface.copy(alpha=.08f))
    ToggleRow("Silence unknown callers","Only numbers confirmed absent from contacts",silence,setSilence)
    Hint("AI answering isn't connected yet. These controls do not turn Airtel forwarding on or off.")
   }}
+  item {
+   val today=events.filter {java.time.Instant.ofEpochMilli(it.timestamp).atZone(java.time.ZoneId.systemDefault()).toLocalDate()==now.toLocalDate()}
+   Section("Today")
+   Hint("From your latest 50 screened calls")
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    GlassCard(Modifier.weight(1f)) {Icon(Icons.Outlined.VerifiedUser,null,tint=MaterialTheme.colorScheme.primary);Spacer(Modifier.height(12.dp));Text("${today.size}",fontSize=29.sp,fontWeight=FontWeight.SemiBold);Text("Screened",fontSize=13.sp);Hint("Local call activity")}
+    GlassCard(Modifier.weight(1f)) {Icon(Icons.Outlined.VolumeOff,null,tint=MaterialTheme.colorScheme.primary);Spacer(Modifier.height(12.dp));Text("${today.count {it.action==ScreeningAction.SILENCE}}",fontSize=29.sp,fontWeight=FontWeight.SemiBold);Text("Silenced",fontSize=13.sp);Hint("By your call rules")}
+   }
+  }
   if(!role || !contacts) item {GlassCard {
    Text("Finish your setup",fontSize=18.sp,fontWeight=FontWeight.SemiBold)
    if(!role) ActionRow(Icons.Outlined.VerifiedUser,"Enable call screening","Choose this app in Android settings",askRole)
@@ -437,7 +462,7 @@ class MainActivity : ComponentActivity() {
  val context=LocalContext.current
  LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(start=22.dp,end=22.dp,bottom=20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
   item {GlassCard {Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-   Box(Modifier.size(54.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Blue,Color(0xFF8975E4)))),contentAlignment=Alignment.Center){Icon(Icons.Outlined.AutoAwesome,null,tint=Color.White,modifier=Modifier.size(26.dp))}
+   Box(Modifier.size(54.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Blue,Color(0xFF50786C)))),contentAlignment=Alignment.Center){Icon(Icons.Outlined.AutoAwesome,null,tint=Color.White,modifier=Modifier.size(26.dp))}
    Column {Text("Personal Call Assistant",fontWeight=FontWeight.SemiBold,fontSize=17.sp);Text("Your phone. Your pace.",fontSize=13.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
   }}}
   item {GlassCard {
@@ -464,7 +489,7 @@ class MainActivity : ComponentActivity() {
    Hint("Turning Assistant mode off or uninstalling this app does not disable carrier forwarding. Manage forwarding separately with your carrier.")
   }}
   item {GlassCard {ActionRow(Icons.Outlined.Code,"Developer diagnostics","Member 2 contact lookup and payload preview",diagnostics)}}
-  item {Text("PERSONAL CALL ASSISTANT  ·  0.2.0",Modifier.fillMaxWidth().padding(8.dp),textAlign=TextAlign.Center,fontSize=10.sp,letterSpacing=1.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+  item {Text("PERSONAL CALL ASSISTANT  ·  0.3.0",Modifier.fillMaxWidth().padding(8.dp),textAlign=TextAlign.Center,fontSize=10.sp,letterSpacing=1.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)}
  }
 }
 private fun statusLabel(status:ContactStatus)=when(status) {

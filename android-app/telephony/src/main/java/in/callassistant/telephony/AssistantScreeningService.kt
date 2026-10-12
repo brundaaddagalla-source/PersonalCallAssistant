@@ -39,22 +39,13 @@ class AssistantScreeningService : CallScreeningService() {
   p.done = true
   p.timeout?.let(main::removeCallbacks)
   pending.remove(p)
-<<<<<<< Updated upstream
   val action = LocalCallRules.decide(p.enabled, p.silence, match.status, p.rule)
-  try {
-   respondToCall(p.details, CallResponse.Builder().setDisallowCall(false).setRejectCall(false)
-    .setSilenceCall(action == ScreeningAction.SILENCE).setSkipCallLog(false).setSkipNotification(false).build())
-   val event = ScreeningEvent(UUID.randomUUID().toString(), System.currentTimeMillis(), p.number, match, action, reason)
-   TelephonyStore(this).add(event)
-   runCatching { ScreeningNotifier.show(this,event) }
-=======
-  val action = ScreeningPolicy.decide(p.enabled, p.silence, match.status)
   val eventId = UUID.randomUUID().toString()
   try {
    respondToCall(p.details, CallResponse.Builder().setDisallowCall(false).setRejectCall(false)
     .setSilenceCall(action == ScreeningAction.SILENCE).setSkipCallLog(false).setSkipNotification(false).build())
    val store = TelephonyStore(this)
-   store.add(ScreeningEvent(
+   val event = ScreeningEvent(
     id = eventId,
     timestamp = System.currentTimeMillis(),
     number = p.number,
@@ -62,7 +53,10 @@ class AssistantScreeningService : CallScreeningService() {
     action = action,
     reason = reason,
     backendStatus = if (!p.enabled) "screening_disabled" else "pending"
-   ))
+   )
+   store.add(event)
+   runCatching { ScreeningNotifier.show(this, event) }
+
    if (p.enabled) {
     val context = CallerContext.from(p.number, match)
     if (context != null) {
@@ -71,13 +65,17 @@ class AssistantScreeningService : CallScreeningService() {
       val result = client.decide(store.aiBackendUrl, context)
       result.onSuccess { decision ->
        store.updateEvent(eventId) { ev ->
-        ev.copy(
+        val updated = ev.copy(
          decisionAction = decision.action,
          intent = decision.intent,
          assistantResponse = decision.speak,
          escalationRequested = decision.shouldEscalate,
          backendStatus = "synced"
         )
+        if (decision.shouldEscalate) {
+         runCatching { ScreeningNotifier.show(this@AssistantScreeningService, updated) }
+        }
+        updated
        }
       }.onFailure {
        store.updateEvent(eventId) { ev ->
@@ -91,7 +89,6 @@ class AssistantScreeningService : CallScreeningService() {
      }
     }
    }
->>>>>>> Stashed changes
   } finally {
    // Cancellation happens after the response, so provider cancellation cannot delay screening.
    p.future?.cancel(true)
